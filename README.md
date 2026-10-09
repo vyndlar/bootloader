@@ -10,3 +10,19 @@ This project showcases a bootloader written in x86-64 assembly. It boots, displa
 ## Finished Result
 
 ![Finished Result](booted.png)
+This is a screenshot of the program booted in a virtual machine. It is running `bootloader.flp`
+
+## Compilation and use
+First, compile the assembly into a binary
+``` shell
+$ nasm -f bin bootloader.asm -o bootloader.bin
+```
+
+Then, move that binary onto a floppydisk. Floppydisks are used due to their ease and compatibility
+
+``` shell
+$ dd if=bootloader.bin of=bootloader.flp bs=512 
+```
+
+To run this, you'll need a virtual machine. I'm using VirtualBox. Set the `bootloader.flp` as a storage device and move the floppy disk to be the first boot option.
+
