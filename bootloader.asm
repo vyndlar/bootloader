@@ -18,6 +18,7 @@ start:
 
 print_string: ; output string in SI to screen
   mov ah, 0Eh ; int 10h 'print char' function
+  mov bl, 0001 ; color blue
 
 .repeat:
   lodsb       ; get char from string
