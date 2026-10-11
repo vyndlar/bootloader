@@ -17,13 +17,13 @@ start:
     ;; (segment * 0x10) + offset = physical memory address
 
 
-    mov ah, 0x0e                ; Teletype output
-    mov al, '1'
-    int 0x10                    ; Graphics BIOS interrupt
-
-    mov ah, 0x0e                ; Teletype output
-    mov al, '6'
-    int 0x10                    ; Graphics BIOS interrupt
+;    mov ah, 0x0e                ; Teletype output
+;    mov al, '1'
+;    int 0x10                    ; Graphics BIOS interrupt
+;
+;    mov ah, 0x0e                ; Teletype output
+;    mov al, '6'
+;    int 0x10                    ; Graphics BIOS interrupt
 
     ;; Now we transition into 32-bit protected mode
     ;; We need to load the GDT, enable protection, do a far jump, and reload data segment register
@@ -66,21 +66,26 @@ init_32bit:
     ;; --- Debug Message: 'OK' to VGA memory ---
     ;; 0xf = white, 0x2 = green
     ;; Each letter is 2 bytes, starting at memory address 0xb8000
-    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
-    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
+;    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
+;    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
 
 
     ;; TODO: set up 64-bit gdt
 
     ;; Now set up 64-bit Long Mode
-    ;; -------------------------------------------------------
-    ;;                ALL ABOUT 64-BIT MODE
-    ;; Paging:
+
+    ;; -------------------------------------------------------------------------------------------------
+    ;;                                  ALL ABOUT 64-BIT MODE
+    ;; Paging: Allows memory to be quickly and efficiently accessed
+    ;;             - Prevents all 2^64 bits to be loaded into memory which would crash
+    ;;             - Introduces virtual memory
     ;; Registers (in this order):
     ;;  CR3 (control register 3): Holds physical base address of PML4 table
-    ;;  CR4: Bit 5 (PAE) set to 1 to enable 64-bit paging structures
-    ;;  IA32_EFER (Extended )
-    ;; -------------------------------------------------------
+    ;;  CR4: Bit 5 (PAE aka physical address extension) set to 1 to enable 64-bit paging structures
+    ;;  IA32_EFER (Extended Feature Enable Register): Bit 8 (LME aka long mode enable) set to 1
+    ;;  CR0: Bit 31 (PG aka paging) set to 1
+    ;; --------------------------------------------------------------------------------------------------
+
     ;; PML4, PDPT, and PD tables are at the end of this file in bss section
     ;; Link PML4 entry 0 to PDPT
     mov eax, pdpt_table
@@ -94,13 +99,57 @@ init_32bit:
 
     ;; Set bit 7 (PS aka Huge Page bit) to map physical address 0x00000000 to 0x001FFFFF
     mov eax, 0x00000000         ; Physical start address
-    or eax, 10000011            ; Present + Writable + Huge Page (huge page is 2MB)
+    or eax, 10000011b           ; Present + Writable + Huge Page (bit 7, huge page is 2MB)
     mov [pd_table], eax
 
-    ;; Now move the base address of PML4 table
+    ;; Now move the base address of PML4 table into CR3
+    mov eax, pml4_table
+    mov cr3, eax
+
+    ;; Enable 64-bit paging structures in CR4
+    mov eax, cr4
+    or eax, 1 << 5              ; Sets bit 5 to 1
+    mov cr4, eax
+
+    ;; Enable long mode in IA32_EFER MSR
+    mov ecx, 0xC0000080         ; IA32_EFER MSR number
+    rdmsr                       ; Load MSR into EDX:EAX
+    or eax, 1 << 8              ; Set LME (Long mode enable) bit (bit 8) to 1
+    wrmsr
+
+    ;; Enable paging in CR0
+    mov eax, cr0
+    or eax, 1 << 31             ; Set PG bit
+    mov cr0, eax
 
 ;    jmp $                       ; Infinite loop once we're in 32-bit mode
-    jmp hang
+;    jmp hang
+    jmp CODE_SEG_64:init_64bit
+
+[BITS 64]
+init_64bit:
+    ;; Reload data segment registers for 64-bit long mode
+    mov ax, DATA_SEG
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+    mov rsp, 0x90000            ; Set up 64-bit stack
+
+    ;; LADIES AND GENTLEMEN....
+    ;;
+    ;;
+    ;; 64-BIT LONG MODE!!!
+
+
+    mov rax, 0x2f342f36
+    mov [0xb8000], rax
+
+hang_64:
+    hlt
+    jmp hang_64
 
 ; ------------------------------------------
 ; Global Descriptor Table (GDT)
@@ -145,6 +194,14 @@ gdt_data:                       ; Identical to gdt_code except for the access by
     db 11001111b
     db 0x0
 
+gdt_code_64:
+    dw 0x0000                   ; Limit is ignored in 64-bit mode
+    dw 0x0000                   ; Base is also ignored
+    db 0x00                     ; ()
+    db 10011010b                ; Access byte (same)
+    db 10100000b                ; Flags: Long mode=1 (L-bit), size=0
+    db 0x00
+
 gdt_end:                        ; Opposite of gdt_start :)
 
 gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pass into the ldgt instruction (line 33)
@@ -154,6 +211,7 @@ gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pa
     ;; Segment offsets
     CODE_SEG equ gdt_code - gdt_start
     DATA_SEG equ gdt_data - gdt_start
+    CODE_SEG_64 equ gdt_code_64 - gdt_start
     ;; The code segment is 8 bytes (0x08) from gdt_start
     ;; The data segment is 16 bytes (0x10) from gdt_start
 
