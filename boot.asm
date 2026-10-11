@@ -3,6 +3,7 @@
 BITS 16
 org 0x7c00                      ; Start this code at memory address 0x7c00
 
+
 start:
     cli                         ; Disable interrupts while editing stack registers
     ;; The Stack Segment register (ss) defines the 64 KB segment assigned to hold stack memory
@@ -68,7 +69,38 @@ init_32bit:
     mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
     mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
 
-    jmp $                       ; Infinite loop once we're in 32-bit mode
+
+    ;; TODO: set up 64-bit gdt
+
+    ;; Now set up 64-bit Long Mode
+    ;; -------------------------------------------------------
+    ;;                ALL ABOUT 64-BIT MODE
+    ;; Paging:
+    ;; Registers (in this order):
+    ;;  CR3 (control register 3): Holds physical base address of PML4 table
+    ;;  CR4: Bit 5 (PAE) set to 1 to enable 64-bit paging structures
+    ;;  IA32_EFER (Extended )
+    ;; -------------------------------------------------------
+    ;; PML4, PDPT, and PD tables are at the end of this file in bss section
+    ;; Link PML4 entry 0 to PDPT
+    mov eax, pdpt_table
+    or eax, 011b                ; 011b attribute flag = Present + Read/wrote
+    mov [pml4_table], eax
+
+    ;; Link PDPT entry 0 to PD
+    mov eax, pd_table
+    or eax, 011b
+    mov [pdpt_table], eax
+
+    ;; Set bit 7 (PS aka Huge Page bit) to map physical address 0x00000000 to 0x001FFFFF
+    mov eax, 0x00000000         ; Physical start address
+    or eax, 10000011            ; Present + Writable + Huge Page (huge page is 2MB)
+    mov [pd_table], eax
+
+    ;; Now move the base address of PML4 table
+
+;    jmp $                       ; Infinite loop once we're in 32-bit mode
+    jmp hang
 
 ; ------------------------------------------
 ; Global Descriptor Table (GDT)
@@ -127,6 +159,15 @@ gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pa
 
 ;   sti                         ; Re-enable hardware interrupts
 
+hang:                           ; This routine puts the CPU in a more efficient sleep (better than 'jmp $')
+    hlt
+    jmp hang
 
     times 510 - ($ - $$) db 0   ; Ensure the file is exactly 512 bytes (calculate offset and fill empty space)
     dw 0xaa55                   ; Magic boot signature
+
+section .bss
+align 4096
+pml4_table: resb 4096
+pdpt_table: resb 4096
+pd_table:   resb 4096
