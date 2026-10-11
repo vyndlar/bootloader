@@ -19,7 +19,7 @@ SECTIONS
 
     /* Read only data such as variables and string literals */
     .rodata : {
-        *(.data)
+        *(.rodata*)
     }
 
     /* The section for global and static variables that have non-zero initial values */

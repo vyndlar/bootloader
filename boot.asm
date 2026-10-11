@@ -1,8 +1,15 @@
 ;; Project Goal: Run any assembly programs on a custom OS
 
-BITS 16
-org 0x7c00                      ; Start this code at memory address 0x7c00
+DEFAULT ABS
+[BITS 16]
 
+    ;; Since we're using a linker, we compile this into a .elf file
+    ;; ELF means executable *linkable* format, meaning that it can be loaded at any memory address
+    ;; It also means that 'org' gets disabled
+    ;; When compiling this into a flat binary (.bin file), we would need to keep this line becuase there would be no linker to set it automatically
+;org 0x7c00                      ; Start this code at memory address 0x7c00
+
+    global start
 
 start:
     cli                         ; Disable interrupts while editing stack registers
@@ -127,6 +134,7 @@ init_32bit:
     jmp CODE_SEG_64:init_64bit
 
 [BITS 64]
+    extern kernel_main
 init_64bit:
     ;; Reload data segment registers for 64-bit long mode
     mov ax, DATA_SEG
