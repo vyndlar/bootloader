@@ -142,6 +142,15 @@ init_64bit:
     ;;
     ;;
     ;; 64-BIT LONG MODE!!!
+    ;;
+    ;; Now we must prepare to load the kernel :)
+
+
+    mov rdi, 0x2badb002         ; Magic constand and first function argument
+    mov rsi, boot_info_struct   ; Second function argument
+    and rsp, -16                ; Make sure rsp is 16-byte aligned
+
+    call kernelmain
 
 
     mov rax, 0x2f342f36
@@ -162,7 +171,7 @@ gdt_null:                       ; The CPU needs the first GDT index to be a null
     dd 0x0                      ; dd again makes dd + dd = 8 bytes total
 
 ;;; Segments (32-bit mode)
-gdt_code:                       ; Defines code segment from physical memory 0x00000000 to 0xFFFFFFFF (total 4 GB)
+gdt_code_32:                       ; Defines code segment from physical memory 0x00000000 to 0xFFFFFFFF (total 4 GB)
     dw 0xffff                   ; Set the lower 16-bits of the segment to 0xFFFF
     dw 0x0                      ; Base address (bits 0-15)
     db 0x0                      ; Base address (bits 16-23)
@@ -209,7 +218,7 @@ gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pa
     dd gdt_start                ; GDT Physical memory address
 
     ;; Segment offsets
-    CODE_SEG equ gdt_code - gdt_start
+    CODE_SEG equ gdt_code_32 - gdt_start
     DATA_SEG equ gdt_data - gdt_start
     CODE_SEG_64 equ gdt_code_64 - gdt_start
     ;; The code segment is 8 bytes (0x08) from gdt_start
