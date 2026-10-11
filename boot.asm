@@ -18,12 +18,13 @@ start:
 
 print_string: ; output string in SI to screen
   mov ah, 0Eh ; int 10h 'print char' function
-  mov bl, 0001 ; color blue
+  ; mov bl, 9h ; color blue
 
 .repeat:
   lodsb       ; get char from string
   cmp al, 0
   je .done    ; if char is zero, end of string
+  mov bl, 01h
   int 10h     ; otherwize print it
   jmp .repeat
 
