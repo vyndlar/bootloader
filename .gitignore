@@ -1,3 +1,6 @@
 old/**
 *.bin
 *.flp
+*.o
+q.log
+qemu.log

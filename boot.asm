@@ -1,8 +1,15 @@
 ;; Project Goal: Run any assembly programs on a custom OS
 
-BITS 16
-org 0x7c00                      ; Start this code at memory address 0x7c00
+DEFAULT ABS
+[BITS 16]
 
+    ;; Since we're using a linker, we compile this into a .elf file
+    ;; ELF means executable *linkable* format, meaning that it can be loaded at any memory address
+    ;; It also means that 'org' gets disabled
+    ;; When compiling this into a flat binary (.bin file), we would need to keep this line becuase there would be no linker to set it automatically
+;org 0x7c00                      ; Start this code at memory address 0x7c00
+
+    global start
 
 start:
     cli                         ; Disable interrupts while editing stack registers
@@ -16,14 +23,27 @@ start:
     mov sp, 0x7c00              ; sp = stack pointer (offset), stack grows downwards
     ;; (segment * 0x10) + offset = physical memory address
 
+    mov [boot_drive], dl
 
-;    mov ah, 0x0e                ; Teletype output
-;    mov al, '1'
-;    int 0x10                    ; Graphics BIOS interrupt
-;
-;    mov ah, 0x0e                ; Teletype output
-;    mov al, '6'
-;    int 0x10                    ; Graphics BIOS interrupt
+    mov ah, 0x0e
+    mov al, '1'
+    int 0x10
+
+    mov ah, 0x0e
+    mov al, '6'
+    int 0x10
+
+    ;; READ KERNEL SECTORS FROM DISK INTO RAM
+    ;; CAUSES TRIPLE SEGMENTATION FAULT
+    mov ah, 0x02                ; BIOS Read sector
+    mov al, 2
+    mov ch, 0
+    mov cl, 2
+    mov dh, 0
+    mov dl, [boot_drive]        ; Restore saved drive number
+    mov bx, 0x7e00           ; Load kernel into memory address 0x7e00 TODO: MAY NEED TO REMOVE ES: AND KEEP ONLY BX
+    int 0x13
+    jc disk_error
 
     ;; Now we transition into 32-bit protected mode
     ;; We need to load the GDT, enable protection, do a far jump, and reload data segment register
@@ -48,6 +68,40 @@ start:
 
     jmp CODE_SEG:init_32bit     ; This ensures that the registers get set up correctly for 32-bit protected mode
 
+disk_error:                     ; print 'diskerr' if error
+    mov ah, 0x06
+    mov al, 0
+    mov bh, 0x07
+    mov cx, 0x0000
+    mov dx, 0x184f
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'd'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'i'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 's'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'k'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'e'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'r'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'r'
+    int 0x10
+    jmp hang
+
+hang:
+    hlt
+    jmp hang
+
 [BITS 32]
 init_32bit:
     ;; Update data segment registers with 32 bit data selector
@@ -63,11 +117,31 @@ init_32bit:
     ;; Update stack pointer for 32-bit space
     mov esp, 0x90000
 
+    mov edi, pml4_table
+    mov ecx, 3072               ; 12,288 bytes / 4 = 3072 dwords
+    xor eax, eax
+    rep stosd
+
+    mov eax, pdpt_table
+    or eax, 011b
+    mov [pml4_table], eax
+    mov dword [pml4_table + 4], 0
+
+    mov eax, pd_table
+    or eax, 011b
+    mov [pdpt_table], eax
+    mov dword [pdpt_table + 4], 0
+
+    mov eax, 0x00000000
+    or eax, 10000011b
+    mov [pd_table], eax
+    mov dword [pd_table + 4], 0
+
     ;; --- Debug Message: 'OK' to VGA memory ---
     ;; 0xf = white, 0x2 = green
     ;; Each letter is 2 bytes, starting at memory address 0xb8000
-;    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
-;    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
+    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
+    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
 
 
     ;; TODO: set up 64-bit gdt
@@ -127,6 +201,7 @@ init_32bit:
     jmp CODE_SEG_64:init_64bit
 
 [BITS 64]
+    extern kernel_main
 init_64bit:
     ;; Reload data segment registers for 64-bit long mode
     mov ax, DATA_SEG
@@ -152,9 +227,7 @@ init_64bit:
 
     call kernelmain
 
-
-    mov rax, 0x2f342f36
-    mov [0xb8000], rax
+    call kernel_main
 
 hang_64:
     hlt
@@ -226,10 +299,7 @@ gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pa
 
 ;   sti                         ; Re-enable hardware interrupts
 
-hang:                           ; This routine puts the CPU in a more efficient sleep (better than 'jmp $')
-    hlt
-    jmp hang
-
+boot_drive:  db 1
     times 510 - ($ - $$) db 0   ; Ensure the file is exactly 512 bytes (calculate offset and fill empty space)
     dw 0xaa55                   ; Magic boot signature
 
