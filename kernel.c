@@ -1,10 +1,6 @@
 #include <stdint.h>
 
-#define VGA_BUFFER_ADDR 0xb8000
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
-#define SPACE_CHAR 0x20
-#define ATTR_BYTE 0x07
+#include "vars.h"
 
 void kernel_main() {
     volatile uint16_t *vga_buffer = (uint16_t *)VGA_BUFFER_ADDR;
