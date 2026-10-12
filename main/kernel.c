@@ -1,7 +1,7 @@
-#include "vars.h"
-#include "kb_input.c"
-
 #include <stdint.h>
+
+#include "vars.h"
+#include "../input/kb_input.h"
 
 void kernel_main() {
     volatile uint16_t *vga_buffer = (uint16_t *)VGA_BUFFER_ADDR;

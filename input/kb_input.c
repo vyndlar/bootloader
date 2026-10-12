@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include "../vars.h"
+#include "../main/vars.h"
 
 // Get the 8-bit data byte read from a specified hardware port
 static inline uint8_t inb(uint16_t port) {
