@@ -1,23 +1,25 @@
 # Bootloader written in x86-64 Assembly
 
-This project showcases a bootloader written in x86-64 assembly. It boots, displays text, and uses BIOS-level system calls to manage bare-metal CPU registers.
+This project showcases a bootloader written in x86-64 assembly. It boots, loads a kernel written in C, and uses BIOS-level system calls to manage bare-metal CPU registers.
+
+## Order of operations
+1. Boot into 16-bit real mode
+2. Load the kernel at memory address 0x7e00
+3. Load into 32-bit Protected mode
+4. Switch to 64-bit Long mode and execute kernel_main() in `kernel.c`
 
 ## Finished Result
 
 ![Finished Result](booted.png)
-This is a screenshot of the program booted in a virtual machine. It is running `boot.flp`
 
 ## Compilation and use
-First, compile the assembly into a binary
+First, run the makefile to generate the floppydisk
 ``` shell
-$ nasm -f bin boot.asm -o boot.bin
+$ make boot
 ```
 
-Then, move that binary onto a floppydisk. Floppydisks are used due to their ease and compatibility
-
+Next, run the virtual machine (qemu must be installed)
 ``` shell
-$ dd if=boot.bin of=boot.flp bs=512 
+$ qemu-system-x86_64 -drive format=raw,file=boot.flp -d int,cpu_reset -D q.log
 ```
-
-To run this, you'll need a virtual machine. I'm using VirtualBox. Set the `boot.flp` as a storage device and move the floppy disk to be the first boot option.
 
