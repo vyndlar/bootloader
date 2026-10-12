@@ -7,7 +7,7 @@
 boot: boot.bin
 	dd if=boot.bin of=boot.flp conv=notrunc
 
-boot.flp: boot.flp:
+boot.flp: boot.bin
 	dd if=/dev/zero of=boot.flp bs=512 count=2880
 
 boot.bin: boot.o kernel.o

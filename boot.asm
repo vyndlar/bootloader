@@ -23,6 +23,15 @@ start:
     mov sp, 0x7c00              ; sp = stack pointer (offset), stack grows downwards
     ;; (segment * 0x10) + offset = physical memory address
 
+    mov ah, 0x02                ; BIOS Read sector
+    mov al, 1
+    mov ch, 0
+    mov cl, 2
+    mov dh, 0
+
+    mov bx, 0x7e00
+    int 0x13
+    jc disk_error
 
 ;    mov ah, 0x0e                ; Teletype output
 ;    mov al, '1'
@@ -54,6 +63,11 @@ start:
     mov cr0, eax
 
     jmp CODE_SEG:init_32bit     ; This ensures that the registers get set up correctly for 32-bit protected mode
+
+disk_error:                     ; print 'e' if error
+    mov ah, 0x0e
+    mov al, 'e'
+    int 0x10
 
 [BITS 32]
 init_32bit:
@@ -151,9 +165,7 @@ init_64bit:
     ;;
     ;; 64-BIT LONG MODE!!!
 
-
-    mov rax, 0x2f342f36
-    mov [0xb8000], rax
+    call kernel_main
 
 hang_64:
     hlt
