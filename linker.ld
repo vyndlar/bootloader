@@ -29,7 +29,7 @@ SECTIONS
 
     /* Uninitialized static variables */
     /* *(COMMON) Collects all uninitialized global vars that the compiler said were C 'common blocks' */
-    .bss : {
+    .bss ALIGN(4096) : {
         *(.bss)
         *(COMMON)
     }

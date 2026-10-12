@@ -24,15 +24,24 @@ start:
     ;; (segment * 0x10) + offset = physical memory address
 
     mov [boot_drive], dl
-    ;; READ SECTOR 2/KERNEL INTO RAM
+
+    mov ah, 0x0e
+    mov al, '1'
+    int 0x10
+
+    mov ah, 0x0e
+    mov al, '6'
+    int 0x10
+
+    ;; READ KERNEL SECTORS FROM DISK INTO RAM
+    ;; CAUSES TRIPLE SEGMENTATION FAULT
     mov ah, 0x02                ; BIOS Read sector
-    mov al, 1
+    mov al, 2
     mov ch, 0
     mov cl, 2
     mov dh, 0
-
     mov dl, [boot_drive]        ; Restore saved drive number
-    mov bx, 0x7e00
+    mov bx, 0x7e00           ; Load kernel into memory address 0x7e00 TODO: MAY NEED TO REMOVE ES: AND KEEP ONLY BX
     int 0x13
     jc disk_error
 
@@ -59,9 +68,33 @@ start:
 
     jmp CODE_SEG:init_32bit     ; This ensures that the registers get set up correctly for 32-bit protected mode
 
-disk_error:                     ; print 'e' if error
+disk_error:                     ; print 'diskerr' if error
+    mov ah, 0x06
+    mov al, 0
+    mov bh, 0x07
+    mov cx, 0x0000
+    mov dx, 0x184f
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'd'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'i'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 's'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'k'
+    int 0x10
     mov ah, 0x0e
     mov al, 'e'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'r'
+    int 0x10
+    mov ah, 0x0e
+    mov al, 'r'
     int 0x10
     jmp hang
 
@@ -107,8 +140,8 @@ init_32bit:
     ;; --- Debug Message: 'OK' to VGA memory ---
     ;; 0xf = white, 0x2 = green
     ;; Each letter is 2 bytes, starting at memory address 0xb8000
-;    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
-;    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
+    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
+    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
 
 
     ;; TODO: set up 64-bit gdt
@@ -257,7 +290,7 @@ gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pa
 
 ;   sti                         ; Re-enable hardware interrupts
 
-boot_drive:  db 0
+boot_drive:  db 1
     times 510 - ($ - $$) db 0   ; Ensure the file is exactly 512 bytes (calculate offset and fill empty space)
     dw 0xaa55                   ; Magic boot signature
 

@@ -4,7 +4,7 @@
 #boot.bin: boot.asm
 #	nasm -f bin boot.asm -o boot.bin
 
-boot: boot.bin
+boot: boot.flp
 	dd if=boot.bin of=boot.flp conv=notrunc
 
 boot.flp: boot.bin
@@ -18,3 +18,4 @@ boot.o: boot.asm
 
 kernel.o: kernel.c
 	gcc -ffreestanding -m64 -mno-red-zone -mcmodel=kernel -fno-pic -fno-pie -c kernel.c -o kernel.o
+#	gcc -ffreestanding -m64 -mno-red-zone -mcmodel=small -fno-pic -fno-pie -c kernel.c -o kernel.o
