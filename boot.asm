@@ -23,23 +23,18 @@ start:
     mov sp, 0x7c00              ; sp = stack pointer (offset), stack grows downwards
     ;; (segment * 0x10) + offset = physical memory address
 
+    mov [boot_drive], dl
+    ;; READ SECTOR 2/KERNEL INTO RAM
     mov ah, 0x02                ; BIOS Read sector
     mov al, 1
     mov ch, 0
     mov cl, 2
     mov dh, 0
 
+    mov dl, [boot_drive]        ; Restore saved drive number
     mov bx, 0x7e00
     int 0x13
     jc disk_error
-
-;    mov ah, 0x0e                ; Teletype output
-;    mov al, '1'
-;    int 0x10                    ; Graphics BIOS interrupt
-;
-;    mov ah, 0x0e                ; Teletype output
-;    mov al, '6'
-;    int 0x10                    ; Graphics BIOS interrupt
 
     ;; Now we transition into 32-bit protected mode
     ;; We need to load the GDT, enable protection, do a far jump, and reload data segment register
@@ -68,6 +63,11 @@ disk_error:                     ; print 'e' if error
     mov ah, 0x0e
     mov al, 'e'
     int 0x10
+    jmp hang
+
+hang:
+    hlt
+    jmp hang
 
 [BITS 32]
 init_32bit:
@@ -83,6 +83,26 @@ init_32bit:
 
     ;; Update stack pointer for 32-bit space
     mov esp, 0x90000
+
+    mov edi, pml4_table
+    mov ecx, 3072               ; 12,288 bytes / 4 = 3072 dwords
+    xor eax, eax
+    rep stosd
+
+    mov eax, pdpt_table
+    or eax, 011b
+    mov [pml4_table], eax
+    mov dword [pml4_table + 4], 0
+
+    mov eax, pd_table
+    or eax, 011b
+    mov [pdpt_table], eax
+    mov dword [pdpt_table + 4], 0
+
+    mov eax, 0x00000000
+    or eax, 10000011b
+    mov [pd_table], eax
+    mov dword [pd_table + 4], 0
 
     ;; --- Debug Message: 'OK' to VGA memory ---
     ;; 0xf = white, 0x2 = green
@@ -237,10 +257,7 @@ gdt_descriptor:                 ; The CPU needs a 6-byte pointer structure to pa
 
 ;   sti                         ; Re-enable hardware interrupts
 
-hang:                           ; This routine puts the CPU in a more efficient sleep (better than 'jmp $')
-    hlt
-    jmp hang
-
+boot_drive:  db 0
     times 510 - ($ - $$) db 0   ; Ensure the file is exactly 512 bytes (calculate offset and fill empty space)
     dw 0xaa55                   ; Magic boot signature
 
