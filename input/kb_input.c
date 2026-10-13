@@ -37,7 +37,7 @@ uint32_t cursor_offset = 0;
 // writes a single char to the frame
 void print_char(char c) {
     if (c == '\n') {
-        cursor_offset = (cursor_offset / 80 + 1) * 80;
+        cursor_offset = (cursor_offset / VGA_WIDTH + 1) * VGA_WIDTH;
 
     } else if (c == '\b' && cursor_offset > 0) {
         cursor_offset--;
