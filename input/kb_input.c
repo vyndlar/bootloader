@@ -1,4 +1,4 @@
-#include <stdint.h>
+//#include <stdint.h>
 
 #include "../main/vars.h"
 
@@ -14,7 +14,8 @@ static inline uint8_t inb(uint16_t port) {
      *
      * Note: GCC uses AT&T assembly syntax: `instruction source, destination` syntax
      * */
-    __asm__ volatile ("inb %1 %0" : "=a"(result) : "d"(port));
+    __asm__ volatile ("inb %1, %0" : "=a"(result) : "d"(port));
+    //printk((uint16_t*)result);
     return result;
 }
 
@@ -29,7 +30,7 @@ static const char scancode_chart[] = {
 };
 
 
-volatile uint16_t *vga_buffer = (uint16_t *)VGA_BUFFER_ADDR;
+// volatile uint16_t *vga_buffer = (uint16_t *)VGA_BUFFER_ADDR;
 uint32_t cursor_offset = 0;
 
 
@@ -40,9 +41,10 @@ void print_char(char c) {
 
     } else if (c == '\b' && cursor_offset > 0) {
         cursor_offset--;
-        vga_buffer[cursor_offset] = (uint16_t)' ' | (0x0f << 8); // adds a ' ' in place of the previous character
+        vga_buffer[cursor_offset] = (uint16_t)' ' | (ATTR_BYTE << 8); // adds a ' ' in place of the previous character
+        cursor_offset--;
     } else if (c != 0) {
-        vga_buffer[cursor_offset] = (uint16_t)c | (0x0f << 8);
+        vga_buffer[cursor_offset] = (uint16_t)c | (ATTR_BYTE << 8);
     }
 }
 
@@ -69,6 +71,7 @@ void keyboard_loop(void) {
                     char ascii = scancode_chart[scancode]; // Get the ASCII char
                     if (ascii != 0) {
                         print_char(ascii);
+                        cursor_offset++;
                     }
                 }
             }
