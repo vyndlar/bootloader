@@ -40,7 +40,7 @@ start:
     mov cl, 2
     mov dh, 0
     mov dl, [boot_drive]        ; Restore saved drive number
-    mov bx, 0x7e00           ; Load kernel into memory address 0x7e00 TODO: MAY NEED TO REMOVE ES: AND KEEP ONLY BX
+    mov bx, 0x7e00              ; Load kernel into memory address 0x7e00 TODO: MAY NEED TO REMOVE ES: AND KEEP ONLY BX
     int 0x13
     jc disk_error
 

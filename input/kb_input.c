@@ -19,6 +19,10 @@ static inline uint8_t inb(uint16_t port) {
     return result;
 }
 
+static inline void outb(uint16_t port, uint8_t val) {
+    __asm__ volatile ("outb %0, %1" : : "a"(val), "d"(port));
+}
+
 // when typing, the system reads each letter as a PS/2 Sancode
 // This table maps each to its respective ASCII Counterpart
 static const char scancode_chart[] = {
@@ -29,6 +33,12 @@ static const char scancode_chart[] = {
   '*',    0, ' '
 };
 
+void update_hardware_cursor(uint32_t offset) {
+    outb(0x3d4, 0x0f);
+    outb(0x3d5, (uint8_t)(offset & 0xff));
+    outb(0x3d4, 0x0e);
+    outb(0x3d5, (uint8_t)((offset >> 8) & 0xff));
+}
 
 // volatile uint16_t *vga_buffer = (uint16_t *)VGA_BUFFER_ADDR;
 uint32_t cursor_offset = 0;
@@ -49,6 +59,7 @@ void print_char(char c) {
 }
 
 void keyboard_loop(void) {
+    update_hardware_cursor(80);
     while (1) {
         // Read status port 0x64
         // Bit 0 indicates if the output buffer contains data
@@ -72,6 +83,7 @@ void keyboard_loop(void) {
                     if (ascii != 0) {
                         print_char(ascii);
                         cursor_offset++;
+                        update_hardware_cursor(cursor_offset);
                     }
                 }
             }
