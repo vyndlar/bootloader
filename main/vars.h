@@ -13,4 +13,6 @@
 
 void printk(const char *str);
 
+uint16_t strlenk(char *s);
+
 #endif

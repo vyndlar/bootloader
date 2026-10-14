@@ -1,9 +1,14 @@
-//#include <stdint.h>
-
 #include "vars.h"
 #include "../input/kb_input.h"
 
 extern uint32_t cursor_offset;
+
+uint16_t strlenk(char *s) {
+    int c = 0;
+    while (*s++)
+        c++;
+    return c;
+}
 
 void printk(const char *str) {
     for (int i = 0; str[i] != '\0'; i++) {
