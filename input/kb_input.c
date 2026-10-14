@@ -42,14 +42,18 @@ void update_hardware_cursor(uint32_t offset) {
 
 // volatile uint16_t *vga_buffer = (uint16_t *)VGA_BUFFER_ADDR;
 uint32_t cursor_offset = 0;
+uint32_t min_cursor_offset = 2;
+uint32_t current_row = 0; // row of the screen (0-25)
+uint32_t total_cursor_offset = 0; // cursor offset including prompt: 0 after prompt
 
 
 // writes a single char to the frame
 void print_char(char c) {
     if (c == '\n') {
         cursor_offset = (cursor_offset / VGA_WIDTH + 1) * VGA_WIDTH;
-
-    } else if (c == '\b' && cursor_offset > 0) {
+        //vga_buffer[0] = (uint16_t)cursor_offset | (ATTR_BYTE << 8);
+        printk(" > ");
+    } else if (c == '\b' && cursor_offset > min_cursor_offset) {
         cursor_offset--;
         vga_buffer[cursor_offset] = (uint16_t)' ' | (ATTR_BYTE << 8); // adds a ' ' in place of the previous character
         cursor_offset--;
@@ -87,7 +91,6 @@ void keyboard_loop(void) {
                     }
                 }
             }
-
         }
     }
 }
