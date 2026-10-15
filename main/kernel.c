@@ -3,6 +3,20 @@
 
 extern uint32_t cursor_offset;
 
+int strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s1)) {
+        s1++;
+        s2++;
+    }
+    return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
+void addChar(char *s, char c) {
+    while (*s++);
+    *(s-1) = c;
+    *s = '\0';
+}
+
 uint16_t strlenk(char *s) {
     int c = 0;
     while (*s++)
@@ -28,14 +42,8 @@ void kernel_main() {
         vga_buffer[i] = (ATTR_BYTE << 8) | SPACE_CHAR;
     }
 
-    //const int *message = (uint16_t*)"Hello from the 64-bit C kernel!";
+//    printk("Yo, welcome to the kernel!\n");
 
-//    for (int i = 0; message[i] != '\0'; i++) {
-//        vga_buffer[i] = (uint16_t)message[i] | (0x0f << 8);
-//    }
-    //printk(message);
-    printk("Yo, welcome to the kernel!\n");
-
-
-   keyboard_loop();
+    print_prompt();
+    keyboard_loop();
 }

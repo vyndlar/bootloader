@@ -1,5 +1,10 @@
 #include "../main/vars.h"
 
+uint32_t cursor_offset = 0; // absolute
+uint32_t current_row = 0; // row of the screen (0-25)
+uint32_t total_cursor_offset = 0; // cursor offset relative to end of prompt
+char cmd_buf[256];
+
 // Get the 8-bit data byte read from a specified hardware port
 static inline uint8_t inb(uint16_t port) {
     uint8_t result;
@@ -38,34 +43,38 @@ void update_hardware_cursor(uint32_t offset) {
     outb(0x3d5, (uint8_t)((offset >> 8) & 0xff));
 }
 
-uint32_t cursor_offset = 0; // absolute
-uint32_t current_row = 0; // row of the screen (0-25)
-uint32_t total_cursor_offset = 0; // cursor offset relative to end of prompt
-
 void print_prompt() {
-	char prompt[] = " $ > ";
+    cursor_offset = (cursor_offset / VGA_WIDTH + 1) * VGA_WIDTH;
 	total_cursor_offset = 0;
-	printk(prompt);
+	cmd_buf[0] = '\0';
+	printk("$ > ");
+}
+
+void process_command(void) {
+	print_prompt();
 }
 
 // writes a single char to the frame
 void print_char(char c) {
     if (c == '\n') { // newline
-        cursor_offset = (cursor_offset / VGA_WIDTH + 1) * VGA_WIDTH;
-        print_prompt();
-    } else if (c == '\b' && total_cursor_offset > 0) { // backspace
-        cursor_offset--;
-        vga_buffer[cursor_offset] = (uint16_t)' ' | (ATTR_BYTE << 8); // adds a ' ' in place of the previous character
-        cursor_offset--;
-		total_cursor_offset--;
+        process_command();
+    } else if (c == '\b') { // backspace
+		if (total_cursor_offset > 0) {
+			cursor_offset--;
+			vga_buffer[cursor_offset] = (uint16_t)' ' | (ATTR_BYTE << 8); // adds a ' ' in place of the previous character
+			//cursor_offset--;
+			total_cursor_offset--;
+		}
     } else if (c != 0) { // print normally
         vga_buffer[cursor_offset] = (uint16_t)c | (ATTR_BYTE << 8);
 		total_cursor_offset++;
+        cursor_offset++;
+		//addChar(cmd_buf, c);
     }
 }
 
 void keyboard_loop(void) {
-    update_hardware_cursor(80);
+    update_hardware_cursor(cursor_offset);
     while (1) {
         // Read status port 0x64
         // Bit 0 indicates if the output buffer contains data
@@ -88,7 +97,6 @@ void keyboard_loop(void) {
                     char ascii = scancode_chart[scancode]; // Get the ASCII char
                     if (ascii != 0) {
                         print_char(ascii);
-                        cursor_offset++;
                         update_hardware_cursor(cursor_offset);
                     }
                 }
