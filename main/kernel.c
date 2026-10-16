@@ -4,17 +4,11 @@
 extern uint32_t cursor_offset;
 
 int strcmp(const char *s1, const char *s2) {
-    while (*s1 && (*s1 == *s1)) {
+    while (*s1 && (*s1 == *s2)) {
         s1++;
         s2++;
     }
     return *(unsigned char *)s1 - *(unsigned char *)s2;
-}
-
-void addChar(char *s, char c) {
-    while (*s++);
-    *(s-1) = c;
-    *s = '\0';
 }
 
 uint16_t strlenk(char *s) {

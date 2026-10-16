@@ -12,10 +12,10 @@
 #define vga_buffer ((volatile uint16_t *)VGA_BUFFER_ADDR)
 
 void printk(const char *str);
-void addChar(char *s, char c);
 uint16_t strlenk(char *s);
 int strcmp(const char*s1, const char *s2);
 
-extern char cmd_buf[256];
+extern char cmd_buf[256]; // The command itself
+extern uint32_t cmd_inx; // The # of chars the user has typed
 
 #endif

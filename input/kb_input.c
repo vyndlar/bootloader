@@ -1,9 +1,9 @@
 #include "../main/vars.h"
 
-uint32_t cursor_offset = 0; // absolute
-uint32_t current_row = 0; // row of the screen (0-25)
-uint32_t total_cursor_offset = 0; // cursor offset relative to end of prompt
 char cmd_buf[256];
+uint32_t cmd_inx = 0;
+uint32_t cursor_offset = 0; // absolute
+uint32_t total_cursor_offset = 0; // cursor offset relative to end of prompt
 
 // Get the 8-bit data byte read from a specified hardware port
 static inline uint8_t inb(uint16_t port) {
@@ -45,13 +45,31 @@ void update_hardware_cursor(uint32_t offset) {
 
 void print_prompt() {
     cursor_offset = (cursor_offset / VGA_WIDTH + 1) * VGA_WIDTH;
-	total_cursor_offset = 0;
-	cmd_buf[0] = '\0';
-	printk("$ > ");
+    total_cursor_offset = 0;
+    cmd_inx = 0;
+    cmd_buf[0] = '\0';
+    printk("$ > ");
 }
 
 void process_command(void) {
-	print_prompt();
+    cmd_buf[cmd_inx] = '\0'; // Null terminate the command buffer
+
+    if (strcmp(cmd_buf, "a") == 0) {
+        printk("\nAAA");
+    } else if (strcmp(cmd_buf, "clear") == 0) {
+        for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
+            vga_buffer[i] = (ATTR_BYTE << 8) | SPACE_CHAR;
+        }
+        cursor_offset = 0;
+        total_cursor_offset = 0;
+        cmd_inx = 0;
+        printk("$ > ");
+        return;
+    } else if (cmd_inx > 0) {
+        printk("\nUnknown Command: ");
+        printk(cmd_buf);
+    }
+    print_prompt();
 }
 
 // writes a single char to the frame
@@ -64,12 +82,21 @@ void print_char(char c) {
 			vga_buffer[cursor_offset] = (uint16_t)' ' | (ATTR_BYTE << 8); // adds a ' ' in place of the previous character
 			//cursor_offset--;
 			total_cursor_offset--;
+            if (cmd_inx > 0) {
+                cmd_inx--;
+                cmd_buf[cmd_inx] = '\0';
+            }
 		}
     } else if (c != 0) { // print normally
         vga_buffer[cursor_offset] = (uint16_t)c | (ATTR_BYTE << 8);
-		total_cursor_offset++;
         cursor_offset++;
-		//addChar(cmd_buf, c);
+        total_cursor_offset++;
+        if (cmd_inx < sizeof(cmd_buf) - 1) {
+            cmd_buf[cmd_inx++] = c;
+        } else {
+            print_prompt();
+        }
+//addChar(cmd_buf, c);
     }
 }
 
