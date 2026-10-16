@@ -54,8 +54,8 @@ void print_prompt() {
 void process_command(void) {
     cmd_buf[cmd_inx] = '\0'; // Null terminate the command buffer
 
-    if (strcmp(cmd_buf, "a") == 0) {
-        printk("\nAAA");
+    if (strcmp(cmd_buf, "whoami") == 0) {
+        printk("\nThe goat...");
     } else if (strcmp(cmd_buf, "clear") == 0) {
         for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
             vga_buffer[i] = (ATTR_BYTE << 8) | SPACE_CHAR;
@@ -66,8 +66,9 @@ void process_command(void) {
         printk("$ > ");
         return;
     } else if (cmd_inx > 0) {
-        printk("\nUnknown Command: ");
+        printk("\n");
         printk(cmd_buf);
+        printk(": Unknown Command\n");
     }
     print_prompt();
 }
