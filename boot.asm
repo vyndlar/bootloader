@@ -35,7 +35,7 @@ start:
 
     ;; READ KERNEL SECTORS FROM DISK INTO RAM
     mov ah, 0x02                ; BIOS Read sector
-    mov al, 2
+    mov al, 15
     mov ch, 0
     mov cl, 2
     mov dh, 0
