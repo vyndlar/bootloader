@@ -26,22 +26,21 @@ start:
     mov [boot_drive], dl
 
     mov ah, 0x0e
-    mov al, '1'
-    int 0x10
-
-    mov ah, 0x0e
-    mov al, '6'
-    int 0x10
+;    mov al, '1'
+;    int 0x10
+;
+;    mov ah, 0x0e
+;    mov al, '6'
+;    int 0x10
 
     ;; READ KERNEL SECTORS FROM DISK INTO RAM
-    ;; CAUSES TRIPLE SEGMENTATION FAULT
     mov ah, 0x02                ; BIOS Read sector
-    mov al, 2
+    mov al, 15
     mov ch, 0
     mov cl, 2
     mov dh, 0
     mov dl, [boot_drive]        ; Restore saved drive number
-    mov bx, 0x7e00           ; Load kernel into memory address 0x7e00 TODO: MAY NEED TO REMOVE ES: AND KEEP ONLY BX
+    mov bx, 0x7e00              ; Load kernel into memory address 0x7e00 TODO: MAY NEED TO REMOVE ES: AND KEEP ONLY BX
     int 0x13
     jc disk_error
 
@@ -140,11 +139,8 @@ init_32bit:
     ;; --- Debug Message: 'OK' to VGA memory ---
     ;; 0xf = white, 0x2 = green
     ;; Each letter is 2 bytes, starting at memory address 0xb8000
-    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
-    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
-
-
-    ;; TODO: set up 64-bit gdt
+;    mov word [0xb8000], 0x2f4f  ; 0x4f = 'O' at row 0, col 0
+;    mov word [0xb8002], 0x2f4b  ; 0x4b = 'K' at row 0, col 1
 
     ;; Now set up 64-bit Long Mode
 
