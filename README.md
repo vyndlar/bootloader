@@ -11,7 +11,9 @@ This project showcases a bootloader written in x86-64 assembly. It uses BIOS-lev
 ## Finished Result
 
 ![Finished Result](booted.png)
-
+#### Available Commands:
+- `whoami`
+- `clear`
 ## Compilation and use
 First, run the makefile to generate the floppydisk
 ``` shell
